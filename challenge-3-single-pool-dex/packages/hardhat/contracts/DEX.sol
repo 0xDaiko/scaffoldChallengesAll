@@ -68,6 +68,8 @@ contract DEX {
      * @notice returns yOutput, or yDelta for xInput (or xDelta)
      * @dev Follow along with the [original tutorial](https://medium.com/@austin_48503/%EF%B8%8F-minimum-viable-exchange-d84f30bd0c90) Price section for an understanding of the DEX's pricing model and for a price function to add to your contract. You may need to update the Solidity syntax (e.g. use + instead of .add, * instead of .mul, etc). Deploy when you are done.
      */
+
+     //Although the tutorial gives this view rights, it is actually able to be executed as a pure function. We should use pure functions whenever possible as they are deterministic and are known to not produce side-effects such as state changes. 
     function price(
         uint256 xInput,
         uint256 xReserves,
