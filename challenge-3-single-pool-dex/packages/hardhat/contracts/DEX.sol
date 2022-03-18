@@ -35,12 +35,12 @@ contract DEX {
     /**
      * @notice Emitted when liquidity provided to DEX and mints LPTs.
      */
-    event LiquidityProvided();
+    event LiquidityProvided(address transactor, uint256 amountMinted, uint256 valueDeposited, uint256 tokenDeposit);
 
     /**
      * @notice Emitted when liquidity removed from DEX and decreases LPT count within DEX.
      */
-    event LiquidityRemoved();
+    event LiquidityRemoved(address transactor, uint256 tokenWithdrawn, uint256 ethWithdrawn, uint256 tokenAmount);
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -93,7 +93,7 @@ contract DEX {
         require(msg.value > 0, "can't swap 0 eth!");
         uint256 ethReserve = address(this).balance.sub(msg.value);
         uint256 token_reserve = token.balanceOf(address(this));
-        uint256 tokenOutput = price(msg.value, ethReserve, token_reserve);
+        tokenOutput = price(msg.value, ethReserve, token_reserve);
 
         require(token.transfer(msg.sender,tokenOutput),"ethToToken(): Swap Reverted.");
         emit EthToTokenSwap(msg.sender, "Eth to Ballons", msg.value, tokenOutput);
@@ -106,7 +106,7 @@ contract DEX {
     function tokenToEth(uint256 tokenInput) public returns (uint256 ethOutput) {
         require(tokenInput > 0, "Can't swap 0 Tokens");
         uint256 token_reserve = token.balanceOf(address(this));
-        uint256 ethOutput = price(tokenInput, token_reserve, address(this).balance);
+        ethOutput = price(tokenInput, token_reserve, address(this).balance);
         require(token.transferFrom(msg.sender, address(this), tokenInput), "tokenToEth(): Swap Reverted");
         (bool sent, ) = msg.sender.call{value: ethOutput}("");
         require(sent, "tokenToEth(): Revert in transfering eth to user.");
@@ -120,13 +120,41 @@ contract DEX {
      * NOTE: user has to make sure to give DEX approval to spend their tokens on their behalf by calling approve function prior to this function call.
      * NOTE: Equal parts of both assets will be removed from the user's wallet with respect to the price outlined by the AMM.
      */
-    function deposit() public payable returns (uint256 tokensDeposited) {}
+    function deposit() public payable returns (uint256 tokensDeposited) {
+        //Gives ethReserves in contract BEFORE the user deposited.
+        uint256 ethReserve = address(this).balance.sub(msg.value);
+        uint256 tokenReserve = token.balanceOf(address(this));
+        uint256 tokenDeposit;
+        //Analyze this line later, I believe it has something to do with the ethReserve cancelling out the msg.value to leave us with the tokenReserve. Why are we adding one? What happens if we don't?
+        tokenDeposit = (msg.value.mul(tokenReserve) / ethReserve).add(1);
+        uint256 liquidityMinted = msg.value.mul(totalLiquidity) / ethReserve;
+        liquidity[msg.sender] = liquidity[msg.sender].add(liquidityMinted);
+        totalLiquidity = totalLiquidity.add(liquidityMinted);
+
+        require(token.transferFrom(msg.sender, address(this), tokenDeposit), "deposit(): token transfer failed");
+        emit LiquidityProvided(msg.sender, liquidityMinted, msg.value, tokenDeposit);
+        return tokenDeposit;
+    }
 
     /**
      * @notice allows withdrawal of $BAL and $ETH from liquidity pool
      * NOTE: with this current code, the msg caller could end up getting very little back if the liquidity is super low in the pool. I guess they could see that with the UI.
      */
     function withdraw(uint256 amount) public returns (uint256 eth_amount, uint256 token_amount) {
-        
+        require(liquidity[msg.sender] >= amount, "Withdraw: Sender does not have enough liquidity");
+        uint256 ethReserve = address(this).balance;
+        uint256 tokenReserve = token.balanceOf(address(this));
+        uint256 ethWithdrawn;
+
+        ethWithdrawn = amount.mul(ethReserve) / totalLiquidity;
+
+        uint256 tokenAmount = amount.mul(tokenReserve) / totalLiquidity;
+        liquidity[msg.sender] = liquidity[msg.sender].sub(amount);
+        totalLiquidity = totalLiquidity.sub(amount);
+        (bool sent,) = payable(msg.sender).call{value: ethWithdrawn}("");
+        require(sent, "Withdraw(): Revert in transfering eth to you.");
+        require(token.transfer(msg.sender, tokenAmount));
+        emit LiquidityRemoved(msg.sender, amount, ethWithdrawn, tokenAmount);
+        return (ethWithdrawn, tokenAmount);
     }
 }
