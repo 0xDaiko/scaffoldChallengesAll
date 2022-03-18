@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
@@ -6,8 +7,8 @@ require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
 
 require("hardhat-deploy");
+require("hardhat-gas-reporter");
 
-require("@eth-optimism/hardhat-ovm");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 
@@ -25,9 +26,9 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "rinkeby";
+const defaultNetwork = "localhost";
 
-const mainnetGwei = 115;
+const mainnetGwei = 21;
 
 function mnemonic() {
   try {
@@ -45,10 +46,22 @@ function mnemonic() {
 module.exports = {
   defaultNetwork,
 
-  // don't forget to set your provider like:
-  // REACT_APP_PROVIDER=https://dai.poa.network in packages/react-app/.env
-  // (then your frontend will talk to your contracts on the live network!)
-  // (you will need to restart the `yarn run start` dev server after editing the .env)
+  /**
+   * gas reporter configuration that let's you know
+   * an estimate of gas for contract deployments and function calls
+   * More here: https://hardhat.org/plugins/hardhat-gas-reporter.html
+   */
+  gasReporter: {
+    currency: "USD",
+    coinmarketcap: process.env.COINMARKETCAP || null,
+  },
+
+  // if you want to deploy to a testnet, mainnet, or xdai, you will need to configure:
+  // 1. An Infura key (or similar)
+  // 2. A private key for the deployer
+  // DON'T PUSH THESE HERE!!!
+  // An `example.env` has been provided in the Hardhat root. Copy it and rename it `.env`
+  // Follow the directions, and uncomment the network you wish to deploy to.
 
   networks: {
     localhost: {
@@ -59,23 +72,56 @@ module.exports = {
       
       */
     },
+
+    // rinkeby: {
+    //   url: `https://rinkeby.infura.io/v3/${process.env.RINKEBY_INFURA_KEY}`,
+    //   accounts: [`${process.env.RINKEBY_DEPLOYER_PRIV_KEY}`],
+    // },
+    // kovan: {
+    //   url: `https://rinkeby.infura.io/v3/${process.env.KOVAN_INFURA_KEY}`,
+    //   accounts: [`${process.env.KOVAN_DEPLOYER_PRIV_KEY}`],
+    // },
+    // mainnet: {
+    //   url: `https://mainnet.infura.io/v3/${process.env.MAINNET_INFURA_KEY}`,
+    //   accounts: [`${process.env.MAINNET_DEPLOYER_PRIV_KEY}`],
+    // },
+    // ropsten: {
+    //   url: `https://ropsten.infura.io/v3/${process.env.ROPSTEN_INFURA_KEY}`,
+    //   accounts: [`${process.env.ROPSTEN_DEPLOYER_PRIV_KEY}`],
+    // },
+    // goerli: {
+    //   url: `https://goerli.infura.io/v3/${process.env.GOERLI_INFURA_KEY}`,
+    //   accounts: [`${process.env.GOERLI_DEPLOYER_PRIV_KEY}`],
+    // },
+    // xdai: {
+    //   url: 'https://dai.poa.network',
+    //   gasPrice: 1000000000,
+    //   accounts: [`${process.env.XDAI_DEPLOYER_PRIV_KEY}`],
+    // },
+
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+
       //    url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXX/eth/rinkeby", // <---- YOUR MORALIS ID! (not limited to infura)
+
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     kovan: {
       url: "https://kovan.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+
       //    url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXX/eth/kovan", // <---- YOUR MORALIS ID! (not limited to infura)
+
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     mainnet: {
       url: "https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+
       //      url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXXXX/eth/mainnet", // <---- YOUR MORALIS ID! (not limited to infura)
+
       gasPrice: mainnetGwei * 1000000000,
       accounts: {
         mnemonic: mnemonic(),
@@ -83,20 +129,38 @@ module.exports = {
     },
     ropsten: {
       url: "https://ropsten.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+
       //      url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXXXX/eth/ropsten",// <---- YOUR MORALIS ID! (not limited to infura)
+
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     goerli: {
       url: "https://goerli.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+
       //      url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXXXX/eth/goerli", // <---- YOUR MORALIS ID! (not limited to infura)
+
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     xdai: {
       url: "https://rpc.xdaichain.com/",
+      gasPrice: 1000000000,
+      accounts: {
+        mnemonic: mnemonic(),
+      },
+    },
+    fantom: {
+      url: "https://rpcapi.fantom.network",
+      gasPrice: 1000000000,
+      accounts: {
+        mnemonic: mnemonic(),
+      },
+    },
+    testnetFantom: {
+      url: "https://rpc.testnet.fantom.network",
       gasPrice: 1000000000,
       accounts: {
         mnemonic: mnemonic(),
@@ -109,7 +173,7 @@ module.exports = {
         mnemonic: mnemonic(),
       },
     },
-    polytest: {
+    mumbai: {
       url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXX/polygon/mumbai", // <---- YOUR MORALIS ID! (not limited to infura)
       gasPrice: 1000000000,
       accounts: {
@@ -153,24 +217,29 @@ module.exports = {
         l2: "localArbitrum",
       },
     },
-    kovanOptimism: {
-      url: "https://kovan.optimism.io",
-      gasPrice: 0,
+    optimism: {
+      url: "https://mainnet.optimism.io",
       accounts: {
         mnemonic: mnemonic(),
       },
-      ovm: true,
+      companionNetworks: {
+        l1: "mainnet",
+      },
+    },
+    kovanOptimism: {
+      url: "https://kovan.optimism.io",
+      accounts: {
+        mnemonic: mnemonic(),
+      },
       companionNetworks: {
         l1: "kovan",
       },
     },
     localOptimism: {
       url: "http://localhost:8545",
-      gasPrice: 0,
       accounts: {
         mnemonic: mnemonic(),
       },
-      ovm: true,
       companionNetworks: {
         l1: "localOptimismL1",
       },
@@ -257,7 +326,7 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: "4ZNCZIQ286YFB74I6T7WWBB2AHBMZR16WT", // your api key here
+    apiKey: "DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW",
   },
 };
 
@@ -438,42 +507,49 @@ task(
   async (_, { ethers }) => {
     const hdkey = require("ethereumjs-wallet/hdkey");
     const bip39 = require("bip39");
-    const mnemonic = fs.readFileSync("./mnemonic.txt").toString().trim();
-    if (DEBUG) console.log("mnemonic", mnemonic);
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    if (DEBUG) console.log("seed", seed);
-    const hdwallet = hdkey.fromMasterSeed(seed);
-    const wallet_hdpath = "m/44'/60'/0'/0/";
-    const account_index = 0;
-    const fullPath = wallet_hdpath + account_index;
-    if (DEBUG) console.log("fullPath", fullPath);
-    const wallet = hdwallet.derivePath(fullPath).getWallet();
-    const privateKey = "0x" + wallet._privKey.toString("hex");
-    if (DEBUG) console.log("privateKey", privateKey);
-    const EthUtil = require("ethereumjs-util");
-    const address =
-      "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
+    try {
+      const mnemonic = fs.readFileSync("./mnemonic.txt").toString().trim();
+      if (DEBUG) console.log("mnemonic", mnemonic);
+      const seed = await bip39.mnemonicToSeed(mnemonic);
+      if (DEBUG) console.log("seed", seed);
+      const hdwallet = hdkey.fromMasterSeed(seed);
+      const wallet_hdpath = "m/44'/60'/0'/0/";
+      const account_index = 0;
+      const fullPath = wallet_hdpath + account_index;
+      if (DEBUG) console.log("fullPath", fullPath);
+      const wallet = hdwallet.derivePath(fullPath).getWallet();
+      const privateKey = "0x" + wallet._privKey.toString("hex");
+      if (DEBUG) console.log("privateKey", privateKey);
+      const EthUtil = require("ethereumjs-util");
+      const address =
+        "0x" + EthUtil.privateToAddress(wallet._privKey).toString("hex");
 
-    const qrcode = require("qrcode-terminal");
-    qrcode.generate(address);
-    console.log("‍📬 Deployer Account is " + address);
-    for (const n in config.networks) {
-      // console.log(config.networks[n],n)
-      try {
-        const provider = new ethers.providers.JsonRpcProvider(
-          config.networks[n].url
-        );
-        const balance = await provider.getBalance(address);
-        console.log(" -- " + n + " --  -- -- 📡 ");
-        console.log("   balance: " + ethers.utils.formatEther(balance));
-        console.log(
-          "   nonce: " + (await provider.getTransactionCount(address))
-        );
-      } catch (e) {
-        if (DEBUG) {
-          console.log(e);
+      const qrcode = require("qrcode-terminal");
+      qrcode.generate(address);
+      console.log("‍📬 Deployer Account is " + address);
+      for (const n in config.networks) {
+        // console.log(config.networks[n],n)
+        try {
+          const provider = new ethers.providers.JsonRpcProvider(
+            config.networks[n].url
+          );
+          const balance = await provider.getBalance(address);
+          console.log(" -- " + n + " --  -- -- 📡 ");
+          console.log("   balance: " + ethers.utils.formatEther(balance));
+          console.log(
+            "   nonce: " + (await provider.getTransactionCount(address))
+          );
+        } catch (e) {
+          if (DEBUG) {
+            console.log(e);
+          }
         }
       }
+    } catch (err) {
+      console.log(`--- Looks like there is no mnemonic file created yet.`);
+      console.log(
+        `--- Please run ${chalk.greenBright("yarn generate")} to create one`
+      );
     }
   }
 );
