@@ -25,12 +25,12 @@ contract DEX {
     /**
      * @notice Emitted when ethToToken() swap transacted
      */
-    event EthToTokenSwap();
+    event EthToTokenSwap(address transactor, string msg, uint256 value, uint256 output);
 
     /**
      * @notice Emitted when tokenToEth() swap transacted
      */
-    event TokenToEthSwap();
+    event TokenToEthSwap(address transactor, string msg, uint256 value, uint256 output);
 
     /**
      * @notice Emitted when liquidity provided to DEX and mints LPTs.
@@ -72,7 +72,7 @@ contract DEX {
         uint256 xInput,
         uint256 xReserves,
         uint256 yReserves
-    ) public view returns (uint256 yOutput) {
+    ) public pure returns (uint256 yOutput) {
         uint256 xInputWithFee = xInput.mul(997);
         uint256 numerator = xInputWithFee.mul(yReserves);
         uint256 denominator = (xReserves.mul(1000)).add(xInputWithFee);
@@ -89,12 +89,30 @@ contract DEX {
     /**
      * @notice sends Ether to DEX in exchange for $BAL
      */
-    function ethToToken() public payable returns (uint256 tokenOutput) {}
+    function ethToToken() public payable returns (uint256 tokenOutput) {
+        require(msg.value > 0, "can't swap 0 eth!");
+        uint256 ethReserve = address(this).balance.sub(msg.value);
+        uint256 token_reserve = token.balanceOf(address(this));
+        uint256 tokenOutput = price(msg.value, ethReserve, token_reserve);
+
+        require(token.transfer(msg.sender,tokenOutput),"ethToToken(): Swap Reverted.");
+        emit EthToTokenSwap(msg.sender, "Eth to Ballons", msg.value, tokenOutput);
+        return tokenOutput;
+    }
 
     /**
      * @notice sends $BAL tokens to DEX in exchange for Ether
      */
-    function tokenToEth(uint256 tokenInput) public returns (uint256 ethOutput) {}
+    function tokenToEth(uint256 tokenInput) public returns (uint256 ethOutput) {
+        require(tokenInput > 0, "Can't swap 0 Tokens");
+        uint256 token_reserve = token.balanceOf(address(this));
+        uint256 ethOutput = price(tokenInput, token_reserve, address(this).balance);
+        require(token.transferFrom(msg.sender, address(this), tokenInput), "tokenToEth(): Swap Reverted");
+        (bool sent, ) = msg.sender.call{value: ethOutput}("");
+        require(sent, "tokenToEth(): Revert in transfering eth to user.");
+        emit TokenToEthSwap(msg.sender, "Ballons to Eth", ethOutput, tokenInput);
+        return ethOutput;
+    }
 
     /**
      * @notice allows deposits of $BAL and $ETH to liquidity pool
